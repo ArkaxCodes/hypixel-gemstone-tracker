@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemstone Price Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Minecraft', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a url('https://i.pinimg.com/736x/9e/33/ed/9e33edf4f985b667ef1a4a22f9c2f57a.jpg') no-repeat center center;
+            background-size: cover;
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(21, 21, 21, 0.95);
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 2px solid #444;
+        }
+        .header h1 {
+            color: #ffd700;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        .header p {
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid #555;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .gemstone-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .gemstone-card {
+            background: rgba(32, 32, 32, 0.95);
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            border: 2px solid #444;
+        }
+        .gemstone-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+            border-color: #666;
+        }
+        .gemstone-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffd700;
+        }
+        .price-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+        .price-label {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        .price-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2ecc71;
+        }
+        .error {
+            background: rgba(192, 57, 43, 0.3);
+            border: 1px solid #c0392b;
+            color: #e74c3c;
+            padding: 20px;
+            border-radius: 4px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .last-updated {
+            text-align: center;
+            color: #aaa;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        .loading {
+            text-align: center;
+            color: #ffd700;
+            font-size: 1.2rem;
+            margin: 50px 0;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 215, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #ffd700;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .gemstone-grid { grid-template-columns: 1fr; }
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+        /* New styles for view toggle and crafting info */
+        
+        .view-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        
+        .view-toggle .btn {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            background: rgba(32, 32, 32, 0.95);
+            border: 2px solid #444;
+        }
+        
+        .view-toggle .btn.active {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border-color: #3498db;
+        }
+        
+        .crafting-card {
+            background: rgba(32, 32, 32, 0.95);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 2px solid #444;
+        }
+        
+        .crafting-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .profit-positive {
+            color: #2ecc71;
+        }
+        
+        .profit-negative {
+            color: #e74c3c;
+        }
+        
+        #prices-view, #crafting-view {
+            display: none;
+        }
+        
+        .view-active {
+            display: block !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <img src="https://wiki.hypixel.net/images/5/59/Minecraft_items_purple_dye.png" 
+                     alt="Gemstone" 
+                     style="vertical-align: middle; width: 32px; height: 32px; margin-right: 10px; image-rendering: pixelated;">
+                Hypixel Gemstone Mining Tracker
+            </h1>
+            <p>Find the most profitable gemstones to mine right now</p>
+        </div>
+        
+        <div class="view-toggle">
+            <button class="btn active" onclick="switchView('prices')">💎 Gemstone Prices</button>
+            <button class="btn" onclick="switchView('crafting')">⚒️ Crafting Calculator</button>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="loadGemstoneData()">🔄 Refresh Prices</button>
+            <button class="btn" onclick="sortByPrice()">💰 Sort by Price</button>
+            <button class="btn" onclick="sortByName()">🔤 Sort by Name</button>
+            <button class="btn" onclick="sortByGemType()">💎 Sort by Gem Type</button>
+            <button class="btn" onclick="showApiInstructions()">📡 Get Live Data</button>
+        </div>
+        
+        <div id="prices-view" class="view-active">
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                Loading gemstone data...
+            </div>
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="gemstone-container" class="gemstone-grid"></div>
+        </div>
+        
+        <div id="crafting-view">
+            <div id="crafting-container" class="gemstone-grid"></div>
+        </div>
+        
+        <div id="last-updated" class="last-updated"></div>
+    </div>
+    <script>
+const CACHE_DURATION = 60000; // 1 minute
+// Update the gemstoneInfo object
+const gemstoneInfo = {
+    // Crystal Hollows Section
+    'ROUGH_RUBY_GEM': { name: 'Rough Ruby', color: '#ff4757', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/red_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWED_RUBY_GEM': { name: 'Flawed Ruby', color: '#ff3742', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/red_stained_glass.png', section: 'Crystal Hollows' },
+    'FINE_RUBY_GEM': { name: 'Fine Ruby', color: '#ff2f3a', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/red_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWLESS_RUBY_GEM': { name: 'Flawless Ruby', color: '#ff1e2d', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/red_stained_glass.png', section: 'Crystal Hollows' },
+    
+    // Jade
+    'ROUGH_JADE_GEM': { name: 'Rough Jade', color: '#7bed9f', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/lime_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWED_JADE_GEM': { name: 'Flawed Jade', color: '#70d89f', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/lime_stained_glass.png', section: 'Crystal Hollows' },
+    'FINE_JADE_GEM': { name: 'Fine Jade', color: '#65c39f', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/lime_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWLESS_JADE_GEM': { name: 'Flawless Jade', color: '#5aae9f', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/lime_stained_glass.png', section: 'Crystal Hollows' },
+    
+    // Sapphire
+    'ROUGH_SAPPHIRE_GEM': { name: 'Rough Sapphire', color: '#3742fa', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/blue_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWED_SAPPHIRE_GEM': { name: 'Flawed Sapphire', color: '#2f3bfa', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/blue_stained_glass.png', section: 'Crystal Hollows' },
+    'FINE_SAPPHIRE_GEM': { name: 'Fine Sapphire', color: '#273afa', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/blue_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWLESS_SAPPHIRE_GEM': { name: 'Flawless Sapphire', color: '#1e32fa', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/blue_stained_glass.png', section: 'Crystal Hollows' },
+    
+    // Amethyst
+    'ROUGH_AMETHYST_GEM': { name: 'Rough Amethyst', color: '#8854d0', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/purple_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWED_AMETHYST_GEM': { name: 'Flawed Amethyst', color: '#7d4cd0', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/purple_stained_glass.png', section: 'Crystal Hollows' },
+    'FINE_AMETHYST_GEM': { name: 'Fine Amethyst', color: '#7244d0', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/purple_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWLESS_AMETHYST_GEM': { name: 'Flawless Amethyst', color: '#673cd0', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/purple_stained_glass.png', section: 'Crystal Hollows' },
+    
+    // Amber
+    'ROUGH_AMBER_GEM': { name: 'Rough Amber', color: '#ffa502', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/orange_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWED_AMBER_GEM': { name: 'Flawed Amber', color: '#ff9500', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/orange_stained_glass.png', section: 'Crystal Hollows' },
+    'FINE_AMBER_GEM': { name: 'Fine Amber', color: '#ff8500', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/orange_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWLESS_AMBER_GEM': { name: 'Flawless Amber', color: '#ff7500', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/orange_stained_glass.png', section: 'Crystal Hollows' },
+    
+    // Topaz
+    'ROUGH_TOPAZ_GEM': { name: 'Rough Topaz', color: '#ff6348', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/yellow_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWED_TOPAZ_GEM': { name: 'Flawed Topaz', color: '#ff5340', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/yellow_stained_glass.png', section: 'Crystal Hollows' },
+    'FINE_TOPAZ_GEM': { name: 'Fine Topaz', color: '#ff4338', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/yellow_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWLESS_TOPAZ_GEM': { name: 'Flawless Topaz', color: '#ff3330', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/yellow_stained_glass.png', section: 'Crystal Hollows' },
+    
+    // Jasper (updated to magenta)
+    'ROUGH_JASPER_GEM': { name: 'Rough Jasper', color: '#C74EBD', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/magenta_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWED_JASPER_GEM': { name: 'Flawed Jasper', color: '#B346AA', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/magenta_stained_glass.png', section: 'Crystal Hollows' },
+    'FINE_JASPER_GEM': { name: 'Fine Jasper', color: '#A13E97', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/magenta_stained_glass.png', section: 'Crystal Hollows' },
+    'FLAWLESS_JASPER_GEM': { name: 'Flawless Jasper', color: '#8F3684', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/magenta_stained_glass.png', section: 'Crystal Hollows' },
+
+    // Glacite Tunnels Section
+    'ROUGH_ONYX_GEM': { name: 'Rough Onyx', color: '#2d3436', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/black_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWED_ONYX_GEM': { name: 'Flawed Onyx', color: '#2d3436', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/black_stained_glass.png', section: 'Glacite Tunnels' },
+    'FINE_ONYX_GEM': { name: 'Fine Onyx', color: '#2d3436', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/black_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWLESS_ONYX_GEM': { name: 'Flawless Onyx', color: '#2d3436', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/black_stained_glass.png', section: 'Glacite Tunnels' },
+
+    'ROUGH_OPAL_GEM': { name: 'Rough Opal', color: '#dfe6e9', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/white_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWED_OPAL_GEM': { name: 'Flawed Opal', color: '#dfe6e9', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/white_stained_glass.png', section: 'Glacite Tunnels' },
+    'FINE_OPAL_GEM': { name: 'Fine Opal', color: '#dfe6e9', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/white_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWLESS_OPAL_GEM': { name: 'Flawless Opal', color: '#dfe6e9', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/white_stained_glass.png', section: 'Glacite Tunnels' },
+
+    'ROUGH_AQUAMARINE_GEM': { name: 'Rough Aquamarine', color: '#00cec9', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/light_blue_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWED_AQUAMARINE_GEM': { name: 'Flawed Aquamarine', color: '#00cec9', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/light_blue_stained_glass.png', section: 'Glacite Tunnels' },
+    'FINE_AQUAMARINE_GEM': { name: 'Fine Aquamarine', color: '#00cec9', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/light_blue_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWLESS_AQUAMARINE_GEM': { name: 'Flawless Aquamarine', color: '#00cec9', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/light_blue_stained_glass.png', section: 'Glacite Tunnels' },
+
+    'ROUGH_CITRINE_GEM': { name: 'Rough Citrine', color: '#ffeaa7', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/yellow_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWED_CITRINE_GEM': { name: 'Flawed Citrine', color: '#ffeaa7', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/yellow_stained_glass.png', section: 'Glacite Tunnels' },
+    'FINE_CITRINE_GEM': { name: 'Fine Citrine', color: '#ffeaa7', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/yellow_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWLESS_CITRINE_GEM': { name: 'Flawless Citrine', color: '#ffeaa7', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/yellow_stained_glass.png', section: 'Glacite Tunnels' },
+
+    'ROUGH_PERIDOT_GEM': { name: 'Rough Peridot', color: '#55efc4', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/lime_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWED_PERIDOT_GEM': { name: 'Flawed Peridot', color: '#55efc4', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/lime_stained_glass.png', section: 'Glacite Tunnels' },
+    'FINE_PERIDOT_GEM': { name: 'Fine Peridot', color: '#55efc4', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/lime_stained_glass.png', section: 'Glacite Tunnels' },
+    'FLAWLESS_PERIDOT_GEM': { name: 'Flawless Peridot', color: '#55efc4', icon: 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/lime_stained_glass.png', section: 'Glacite Tunnels' }
+};
+
+let gemstoneData = [];
+let lastUpdated = null;
+let lastFetch = 0;
+
+async function loadGemstoneData() {
+    const now = Date.now();
+    if (now - lastFetch < CACHE_DURATION) {
+        return; // Use cached data
+    }
+    lastFetch = now;
+
+    const loading = document.getElementById('loading');
+    const error = document.getElementById('error');
+    const container = document.getElementById('gemstone-container');
+    loading.style.display = 'block';
+    error.style.display = 'none';
+    container.innerHTML = '';
+
+    try {
+        const API_KEY = localStorage.getItem('hypixel_api_key') || '';
+        const response = await fetch('https://api.hypixel.net/skyblock/bazaar', {
+            headers: {
+                'API-Key': API_KEY
+            }
+        });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        if (!data || !data.success) throw new Error('Invalid API response format');
+        await processApiData(data);
+        error.style.display = 'none';
+    } catch (err) {
+        // Add fallback API
+        try {
+            const response = await fetch('https://api.slothpixel.me/api/skyblock/bazaar');
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+            await processApiData(data);
+        } catch {
+            loadDemoData();
+            showConnectionError();
+        }
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+async function processApiData(data) {
+    if (!data || typeof data !== 'object') {
+        throw new Error('Invalid API response');
+    }
+    
+    const products = data.products || data;
+    gemstoneData = [];
+    
+    try {
+        for (const [productId, productData] of Object.entries(products)) {
+            if (!gemstoneInfo[productId]) continue;
+            if (productId.includes('ROUGH')) continue;
+            
+            const quick = productData?.quick_status || productData?.quickStatus;
+            if (!quick) continue;
+
+            // Changed to use correct price mappings:
+            // buyPrice = highest buy order (what you get when insta selling)
+            // sellPrice = lowest sell order (what you pay when insta buying)
+            const instaSellPrice = Number(quick.buyPrice) || 0;
+            const instaBuyPrice = Number(quick.sellPrice) || 0;
+            
+            if (instaSellPrice < 0 || instaBuyPrice < 0) continue;
+
+            gemstoneData.push({
+                id: productId,
+                name: gemstoneInfo[productId].name,
+                icon: gemstoneInfo[productId].icon,
+                color: gemstoneInfo[productId].color,
+                quality: getGemstoneQuality(productId),
+                buyPrice: instaSellPrice,  // What you get when insta selling
+                sellPrice: instaBuyPrice,  // What you pay when insta buying
+                sellVolume: Number(quick.sellVolume) || 0,
+                buyVolume: Number(quick.buyVolume) || 0
+            });
+        }
+    } catch (err) {
+        console.error('Error processing API data:', err);
+        throw new Error('Failed to process API data');
+    }
+
+    if (gemstoneData.length === 0) throw new Error('No gemstone data found in API response');
+    gemstoneData.sort((a, b) => b.miningValue - a.miningValue);
+    lastUpdated = new Date();
+    displayGemstones();
+    updateLastUpdatedTime();
+    showSuccessMessage();
+}
+
+function getGemstoneQuality(productId) {
+    if (productId.includes('ROUGH')) return 'Rough';
+    if (productId.includes('FLAWED')) return 'Flawed';
+    if (productId.includes('FINE')) return 'Fine';
+    if (productId.includes('FLAWLESS')) return 'Flawless';
+    return 'Unknown';
+}
+
+function showConnectionError() {
+    const error = document.getElementById('error');
+    error.innerHTML = `
+        <div style="margin-bottom: 15px;">
+            <strong>📊 Using Demo Data</strong>
+        </div>
+        <div style="margin-bottom: 15px;">
+            Could not fetch live prices. Showing sample data instead.
+        </div>
+        <div style="font-size: 0.9rem; color: #666;">
+            Prices update every few minutes. Try refreshing later.
+        </div>
+    `;
+    error.style.display = 'block';
+}
+
+function showSuccessMessage() {
+    const container = document.getElementById('gemstone-container');
+    const successNotice = document.createElement('div');
+    successNotice.style.cssText = `
+        background: rgba(76, 175, 80, 0.1);
+        border: 1px solid #4CAF50;
+        color: #2E7D32;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 20px;
+        font-weight: bold;
+    `;
+    successNotice.innerHTML = '✅ Live Data - Showing current mining values from Hypixel bazaar';
+    container.insertBefore(successNotice, container.firstChild);
+    setTimeout(() => {
+        if (successNotice.parentNode) successNotice.parentNode.removeChild(successNotice);
+    }, 5000);
+}
+
+function loadDemoData() {
+    gemstoneData = [
+        // Ruby
+        { id: 'ROUGH_RUBY_GEM', name: 'Rough Ruby', icon: gemstoneInfo['ROUGH_RUBY_GEM'].icon, color: '#ff4757', quality: 'Rough', sellPrice: 100, buyPrice: 120, sellVolume: 10000, buyVolume: 12000, miningValue: 100 },
+        { id: 'FLAWED_RUBY_GEM', name: 'Flawed Ruby', icon: gemstoneInfo['FLAWED_RUBY_GEM'].icon, color: '#ff3742', quality: 'Flawed', sellPrice: 8000, buyPrice: 9000, sellVolume: 5000, buyVolume: 6000, miningValue: 8000 },
+        { id: 'FINE_RUBY_GEM', name: 'Fine Ruby', icon: gemstoneInfo['FINE_RUBY_GEM'].icon, color: '#ff2f3a', quality: 'Fine', sellPrice: 650000, buyPrice: 700000, sellVolume: 1000, buyVolume: 1200, miningValue: 650000 },
+        { id: 'FLAWLESS_RUBY_GEM', name: 'Flawless Ruby', icon: gemstoneInfo['FLAWLESS_RUBY_GEM'].icon, color: '#ff1e2d', quality: 'Flawless', sellPrice: 52000000, buyPrice: 54000000, sellVolume: 200, buyVolume: 250, miningValue: 52000000 },
+        // Jade
+        { id: 'ROUGH_JADE_GEM', name: 'Rough Jade', icon: gemstoneInfo['ROUGH_JADE_GEM'].icon, color: '#7bed9f', quality: 'Rough', sellPrice: 110, buyPrice: 130, sellVolume: 9000, buyVolume: 11000, miningValue: 110 },
+        { id: 'FLAWED_JADE_GEM', name: 'Flawed Jade', icon: gemstoneInfo['FLAWED_JADE_GEM'].icon, color: '#70d89f', quality: 'Flawed', sellPrice: 9000, buyPrice: 9500, sellVolume: 4000, buyVolume: 5000, miningValue: 9000 },
+        { id: 'FINE_JADE_GEM', name: 'Fine Jade', icon: gemstoneInfo['FINE_JADE_GEM'].icon, color: '#65c39f', quality: 'Fine', sellPrice: 700000, buyPrice: 750000, sellVolume: 900, buyVolume: 1100, miningValue: 700000 },
+        { id: 'FLAWLESS_JADE_GEM', name: 'Flawless Jade', icon: gemstoneInfo['FLAWLESS_JADE_GEM'].icon, color: '#5aae9f', quality: 'Flawless', sellPrice: 54000000, buyPrice: 56000000, sellVolume: 180, buyVolume: 220, miningValue: 54000000 },
+        // Sapphire
+        { id: 'ROUGH_SAPPHIRE_GEM', name: 'Rough Sapphire', icon: gemstoneInfo['ROUGH_SAPPHIRE_GEM'].icon, color: '#3742fa', quality: 'Rough', sellPrice: 120, buyPrice: 140, sellVolume: 9500, buyVolume: 11500, miningValue: 120 },
+        { id: 'FLAWED_SAPPHIRE_GEM', name: 'Flawed Sapphire', icon: gemstoneInfo['FLAWED_SAPPHIRE_GEM'].icon, color: '#2f3bfa', quality: 'Flawed', sellPrice: 8500, buyPrice: 9200, sellVolume: 4200, buyVolume: 5100, miningValue: 8500 },
+        { id: 'FINE_SAPPHIRE_GEM', name: 'Fine Sapphire', icon: gemstoneInfo['FINE_SAPPHIRE_GEM'].icon, color: '#273afa', quality: 'Fine', sellPrice: 670000, buyPrice: 720000, sellVolume: 950, buyVolume: 1150, miningValue: 670000 },
+        { id: 'FLAWLESS_SAPPHIRE_GEM', name: 'Flawless Sapphire', icon: gemstoneInfo['FLAWLESS_SAPPHIRE_GEM'].icon, color: '#1e32fa', quality: 'Flawless', sellPrice: 53000000, buyPrice: 55000000, sellVolume: 190, buyVolume: 230, miningValue: 53000000 },
+        // Amethyst
+        { id: 'ROUGH_AMETHYST_GEM', name: 'Rough Amethyst', icon: gemstoneInfo['ROUGH_AMETHYST_GEM'].icon, color: '#8854d0', quality: 'Rough', sellPrice: 115, buyPrice: 135, sellVolume: 9200, buyVolume: 11200, miningValue: 115 },
+        { id: 'FLAWED_AMETHYST_GEM', name: 'Flawed Amethyst', icon: gemstoneInfo['FLAWED_AMETHYST_GEM'].icon, color: '#7d4cd0', quality: 'Flawed', sellPrice: 8300, buyPrice: 9100, sellVolume: 4100, buyVolume: 5050, miningValue: 8300 },
+        { id: 'FINE_AMETHYST_GEM', name: 'Fine Amethyst', icon: gemstoneInfo['FINE_AMETHYST_GEM'].icon, color: '#7244d0', quality: 'Fine', sellPrice: 660000, buyPrice: 710000, sellVolume: 920, buyVolume: 1120, miningValue: 660000 },
+        { id: 'FLAWLESS_AMETHYST_GEM', name: 'Flawless Amethyst', icon: gemstoneInfo['FLAWLESS_AMETHYST_GEM'].icon, color: '#673cd0', quality: 'Flawless', sellPrice: 52500000, buyPrice: 54500000, sellVolume: 185, buyVolume: 225, miningValue: 52500000 },
+        // Amber
+        { id: 'ROUGH_AMBER_GEM', name: 'Rough Amber', icon: gemstoneInfo['ROUGH_AMBER_GEM'].icon, color: '#ffa502', quality: 'Rough', sellPrice: 105, buyPrice: 125, sellVolume: 9100, buyVolume: 11100, miningValue: 105 },
+        { id: 'FLAWED_AMBER_GEM', name: 'Flawed Amber', icon: gemstoneInfo['FLAWED_AMBER_GEM'].icon, color: '#ff9500', quality: 'Flawed', sellPrice: 8100, buyPrice: 8900, sellVolume: 4050, buyVolume: 5025, miningValue: 8100 },
+        { id: 'FINE_AMBER_GEM', name: 'Fine Amber', icon: gemstoneInfo['FINE_AMBER_GEM'].icon, color: '#ff8500', quality: 'Fine', sellPrice: 640000, buyPrice: 690000, sellVolume: 910, buyVolume: 1110, miningValue: 640000 },
+        { id: 'FLAWLESS_AMBER_GEM', name: 'Flawless Amber', icon: gemstoneInfo['FLAWLESS_AMBER_GEM'].icon, color: '#ff7500', quality: 'Flawless', sellPrice: 51500000, buyPrice: 53500000, sellVolume: 180, buyVolume: 220, miningValue: 51500000 },
+        // Topaz
+        { id: 'ROUGH_TOPAZ_GEM', name: 'Rough Topaz', icon: gemstoneInfo['ROUGH_TOPAZ_GEM'].icon, color: '#ff6348', quality: 'Rough', sellPrice: 108, buyPrice: 128, sellVolume: 9150, buyVolume: 11150, miningValue: 108 },
+        { id: 'FLAWED_TOPAZ_GEM', name: 'Flawed Topaz', icon: gemstoneInfo['FLAWED_TOPAZ_GEM'].icon, color: '#ff5340', quality: 'Flawed', sellPrice: 8200, buyPrice: 9000, sellVolume: 4080, buyVolume: 5040, miningValue: 8200 },
+        { id: 'FINE_TOPAZ_GEM', name: 'Fine Topaz', icon: gemstoneInfo['FINE_TOPAZ_GEM'].icon, color: '#ff4338', quality: 'Fine', sellPrice: 645000, buyPrice: 695000, sellVolume: 915, buyVolume: 1115, miningValue: 645000 },
+        { id: 'FLAWLESS_TOPAZ_GEM', name: 'Flawless Topaz', icon: gemstoneInfo['FLAWLESS_TOPAZ_GEM'].icon, color: '#ff3330', quality: 'Flawless', sellPrice: 51800000, buyPrice: 53800000, sellVolume: 182, buyVolume: 222, miningValue: 51800000 },
+        // Jasper (updated to magenta)
+        { id: 'ROUGH_JASPER_GEM', name: 'Rough Jasper', icon: gemstoneInfo['ROUGH_JASPER_GEM'].icon, color: '#C74EBD', quality: 'Rough', sellPrice: 112, buyPrice: 132, sellVolume: 9300, buyVolume: 11300, miningValue: 112 },
+        { id: 'FLAWED_JASPER_GEM', name: 'Flawed Jasper', icon: gemstoneInfo['FLAWED_JASPER_GEM'].icon, color: '#B346AA', quality: 'Flawed', sellPrice: 8800, buyPrice: 9600, sellVolume: 4400, buyVolume: 5200, miningValue: 8800 },
+        { id: 'FINE_JASPER_GEM', name: 'Fine Jasper', icon: gemstoneInfo['FINE_JASPER_GEM'].icon, color: '#A13E97', quality: 'Fine', sellPrice: 690000, buyPrice: 740000, sellVolume: 920, buyVolume: 1120, miningValue: 690000 },
+        { id: 'FLAWLESS_JASPER_GEM', name: 'Flawless Jasper', icon: gemstoneInfo['FLAWLESS_JASPER_GEM'].icon, color: '#8F3684', quality: 'Flawless', sellPrice: 55000000, buyPrice: 57000000, sellVolume: 195, buyVolume: 235, miningValue: 55000000 }
+    ];
+    gemstoneData.sort((a, b) => b.miningValue - a.miningValue);
+    lastUpdated = new Date();
+    displayGemstones();
+    updateLastUpdatedTime();
+}
+
+function calculateUpgradeProfits(gem) {
+    const qualityOrder = ['Rough', 'Flawed', 'Fine', 'Flawless'];
+    const upgrades = [];
+    
+    if (gem.quality !== 'Flawless') {
+        const currentIndex = qualityOrder.indexOf(gem.quality);
+        const nextQuality = qualityOrder[currentIndex + 1];
+        const nextTierGem = gemstoneData.find(g => 
+            g.name.includes(gem.name.split(' ').pop()) && 
+            g.quality === nextQuality
+        );
+
+        if (nextTierGem) {
+            const materialsNeeded = 80;
+            const craftCost = materialsNeeded * gem.sellPrice; // Cost to buy materials
+            const sellPrice = nextTierGem.sellPrice; // Price when selling crafted gem
+            const profit = sellPrice - craftCost;
+            const roi = ((profit / craftCost) * 100).toFixed(1);
+
+            upgrades.push({
+                from: gem.quality,
+                to: nextQuality,
+                cost: craftCost,
+                revenue: sellPrice,
+                profit: profit,
+                roi: roi
+            });
+        }
+    }
+
+    return upgrades;
+}
+
+function displayGemstones() {
+    const container = document.getElementById('gemstone-container');
+    container.innerHTML = '';
+    
+    if (!gemstoneData || gemstoneData.length === 0) {
+        container.innerHTML += '<div style="text-align:center;color:#f44336;font-weight:bold;">No gemstone data available.</div>';
+        return;
+    }
+
+    // Create sections
+    const sections = {
+        'Crystal Hollows': document.createElement('div'),
+        'Glacite Tunnels': document.createElement('div')
+    };
+
+    // Add section headers
+    Object.keys(sections).forEach(sectionName => {
+        sections[sectionName].innerHTML = `
+            <h2 style="color: #ffd700; font-size: 2rem; margin: 30px 0 20px 0; text-align: center; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                ${sectionName}
+            </h2>
+            <div class="gemstone-grid"></div>
+        `;
+    });
+
+    // Sort and display gems by section
+    gemstoneData.forEach(gem => {
+        const section = gemstoneInfo[gem.id]?.section || 'Crystal Hollows';
+        const card = document.createElement('div');
+        card.className = 'gemstone-card';
+        card.innerHTML = `
+            <div class="gemstone-name" style="color:${gem.color}">
+                <img src="${gem.icon}" 
+                     class="gemstone-icon" 
+                     alt="${gem.name}" 
+                     onerror="handleImageError(this)"/> ${gem.name}
+            </div>
+            <div class="price-info" style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                <div class="price-item">
+                    <div class="price-label">Sell Order</div>
+                    <div class="price-value" style="color: #2E7D32;">${formatPrice(gem.buyPrice)}</div>
+                </div>
+            </div>
+        `;
+        sections[section].querySelector('.gemstone-grid').appendChild(card);
+    });
+
+    // Add sections to container
+    Object.values(sections).forEach(section => {
+        container.appendChild(section);
+    });
+}
+
+function showBestCraftProfitNotice() {
+    const types = {};
+    const craftingInfo = [];
+
+    try {
+        // Group gems by type
+        gemstoneData.forEach(gem => {
+            const type = gem.name.split(' ').pop();
+            if (!types[type]) types[type] = {};
+            types[type][gem.quality] = gem;
+        });
+
+        // Calculate profits for each type
+        Object.keys(types).forEach(type => {
+            const gems = types[type];
+            if (!gems.Fine || !gems.Flawless) return;
+
+            const materialCost = 80 * gems.Fine.buyPrice;
+            const sellOrderProfit = gems.Flawless.buyPrice - materialCost;
+            
+            craftingInfo.push({
+                type: type,
+                profitSellOrder: sellOrderProfit,
+                shouldCraft: sellOrderProfit > 0,
+                info: `
+                    <div style="margin-bottom: 5px;">Cost: 80 Fine × ${formatPrice(gems.Fine.buyPrice)} = ${formatPrice(materialCost)}</div>
+                    <div style="color: #2E7D32;">Sell Order: ${formatPrice(gems.Flawless.buyPrice)} | Profit: ${formatPrice(sellOrderProfit)}</div>
+                `
+            });
+        });
+
+        // Sort by sell order profit
+        craftingInfo.sort((a, b) => b.profitSellOrder - a.profitSellOrder);
+
+        const notice = document.createElement('div');
+        notice.id = 'profit-notices';
+        notice.style.cssText = `
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+            margin-bottom: 22px;
+        `;
+
+        craftingInfo.forEach(info => {
+            const bestProfit = Math.max(info.profitSellOffer, info.profitInstaSell);
+            const card = document.createElement('div');
+            card.style.cssText = `
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 12px;
+                padding: 15px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                border-left: 5px solid ${info.shouldCraft ? '#4CAF50' : '#666'};
+            `;
+            
+            // Create money bag icon using colored glass block
+            const moneyBagIcon = info.shouldCraft ? 
+                `<img src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/lime_stained_glass.png" 
+                      style="width: 24px; height: 24px; vertical-align: middle; image-rendering: pixelated;">` :
+                `<img src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.3/assets/minecraft/textures/block/red_stained_glass.png" 
+                      style="width: 24px; height: 24px; vertical-align: middle; image-rendering: pixelated;">`;
+            
+            card.innerHTML = `
+                <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: ${gemstoneInfo[`FINE_${info.type}_GEM`]?.color || '#333'}">
+                    ${info.type} Crafting ${moneyBagIcon}
+                </div>
+                <div style="margin: 5px 0; ${info.shouldCraft ? 'color: #2E7D32;' : 'color: #666;'}">
+                    ${info.info}
+                </div>
+                <div style="margin-top: 10px; font-weight: bold; color: ${info.profitSellOrder > 0 ? '#2E7D32' : '#d32f2f'}">
+                    Best Profit: ${formatPrice(info.profitSellOrder)}
+                </div>
+            `;
+            notice.appendChild(card);
+        });
+
+        const container = document.getElementById('gemstone-container');
+        container.insertBefore(notice, container.firstChild);
+
+    } catch (err) {
+        console.error('Error calculating profits:', err);
+    }
+}
+
+// Helper function for Ruby NPC values
+function getNPCValue(quality) {
+    const npcValues = {
+        'Rough': 3,
+        'Flawed': 240,
+        'Fine': 19200,
+        'Flawless': 1536000
+    };
+    return npcValues[quality] || 0;
+}
+
+function updateLastUpdatedTime() {
+    const el = document.getElementById('last-updated');
+    if (!lastUpdated) {
+        el.textContent = '';
+        return;
+    }
+    el.textContent = 'Last updated: ' + lastUpdated.toLocaleString();
+}
+
+function formatPrice(value) {
+    // Check for null, undefined, or NaN
+    if (value === null || value === undefined || isNaN(value)) {
+        return '0';  // Return '0' instead of '-'
+    }
+    
+    if (value >= 1000000) {
+        return (value / 1000000).toFixed(1) + 'm';
+    }
+    if (value >= 1000) {
+        return (value / 1000).toFixed(1) + 'k';
+    }
+    return value.toFixed(0);
+}
+
+function sortByPrice() {
+    gemstoneData.sort((a, b) => b.sellPrice - a.sellPrice);
+    displayGemstones();
+    updateLastUpdatedTime();
+}
+
+function sortByName() {
+    gemstoneData.sort((a, b) => a.name.localeCompare(b.name));
+    displayGemstones();
+    updateLastUpdatedTime();
+}
+
+function sortByGemType() {
+    // Sort by gemstone type (Ruby, Jade, etc.), then by quality
+    const order = ['Rough', 'Flawed', 'Fine', 'Flawless'];
+    gemstoneData.sort((a, b) => {
+        const typeA = a.name.split(' ').pop();
+        const typeB = b.name.split(' ').pop();
+        if (typeA !== typeB) return typeA.localeCompare(typeB);
+        return order.indexOf(a.quality) - order.indexOf(b.quality);
+    });
+    displayGemstones();
+    updateLastUpdatedTime();
+}
+
+function showApiInstructions() {
+    alert("Live data is fetched automatically from the Hypixel Bazaar API when you refresh prices.");
+}
+
+function handleImageError(img) {
+    const fallbackEmoji = {
+        'RUBY': '❤️',
+        'JADE': '💚',
+        'SAPPHIRE': '💙',
+        'AMETHYST': '💜',
+        'AMBER': '🧡',
+        'TOPAZ': '💛',
+        'JASPER': '❤️'
+    };
+    
+    const gemType = img.alt.split(' ')[1];
+    img.style.display = 'inline-block';
+    img.style.width = '24px';
+    img.style.height = '24px';
+    img.style.fontSize = '20px';
+    img.style.textAlign = 'center';
+    img.style.lineHeight = '24px';
+    img.outerHTML = `<span class="gemstone-icon-fallback">${fallbackEmoji[gemType] || '💎'}</span>`;
+}
+
+function addTierButtons() {
+    const controlsDiv = document.querySelector('.controls');
+    const tierButtons = `
+        <button class="btn" onclick="filterByTier('all')">🔍 All Tiers</button>
+        <button class="btn" onclick="filterByTier('Flawless')">💎 Flawless</button>
+        <button class="btn" onclick="filterByTier('Fine')">✨ Fine</button>
+        <button class="btn" onclick="filterByTier('Flawed')">💫 Flawed</button>
+        <button class="btn" onclick="filterByTier('Rough')">🪨 Rough</button>
+    `;
+    controlsDiv.insertAdjacentHTML('beforeend', tierButtons);
+}
+
+function filterByTier(tier) {
+    const container = document.getElementById('gemstone-container');
+    container.innerHTML = '';
+    
+    if (tier === 'all') {
+        displayGemstones();
+        return;
+    }
+
+    const filteredData = gemstoneData.filter(gem => gem.quality === tier);
+    
+    if (filteredData.length === 0) {
+        container.innerHTML = `<div style="text-align:center;color:#f44336;font-weight:bold;">No ${tier} gems found.</div>`;
+        return;
+    }
+
+    // Remove crafting notice logic
+    filteredData.forEach(gem => {
+        const card = document.createElement('div');
+        card.className = 'gemstone-card';
+        card.innerHTML = `
+            <div class="gemstone-name" style="color:${gem.color}">
+                <img src="${gem.icon}" 
+                     class="gemstone-icon" 
+                     alt="${gem.name}" 
+                     onerror="handleImageError(this)"/> ${gem.name}
+            </div>
+            <div class="price-info" style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                <div class="price-item">
+                    <div class="price-label">Sell Order</div>
+                    <div class="price-value" style="color: #2E7D32;">${formatPrice(gem.buyPrice)}</div>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function switchView(viewName) {
+    // Update button states
+    document.querySelectorAll('.view-toggle .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`.view-toggle .btn:nth-child(${viewName === 'prices' ? '1' : '2'})`).classList.add('active');
+    
+    // Hide all views
+    document.getElementById('prices-view').classList.remove('view-active');
+    document.getElementById('crafting-view').classList.remove('view-active');
+    
+    // Show selected view
+    document.getElementById(`${viewName}-view`).classList.add('view-active');
+    
+    if (viewName === 'crafting') {
+        displayCraftingView();
+    } else {
+        displayGemstones();
+    }
+}
+
+function displayCraftingView() {
+    const container = document.getElementById('crafting-container');
+    container.innerHTML = '';
+    
+    const types = {};
+    
+    // Group gems by type
+    gemstoneData.forEach(gem => {
+        const type = gem.name.split(' ').pop();
+        if (!types[type]) types[type] = {};
+        types[type][gem.quality] = gem;
+    });
+    
+    // Calculate and display crafting profits for each type
+    Object.keys(types).sort().forEach(type => {
+        const gems = types[type];
+        if (!gems.Fine || !gems.Flawless) return;
+        
+        const materialCost = 80 * gems.Fine.buyPrice;
+        const sellProfit = gems.Flawless.buyPrice - materialCost;
+        const profitClass = sellProfit > 0 ? 'profit-positive' : 'profit-negative';
+        
+        const card = document.createElement('div');
+        card.className = 'crafting-card';
+        card.innerHTML = `
+            <div class="crafting-title" style="color: ${gemstoneInfo[`FINE_${type}_GEM`]?.color || '#fff'}">
+                <img src="${gems.Fine.icon}" alt="${type}" style="width: 32px; height: 32px; image-rendering: pixelated;">
+                ${type} Crafting
+            </div>
+            <div class="price-info">
+                <div style="margin-bottom: 15px;">
+                    <div class="price-label">Material Cost (80 Fine ${type})</div>
+                    <div class="price-value">${formatPrice(materialCost)}</div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <div class="price-label">Flawless ${type} Sell Price</div>
+                    <div class="price-value">${formatPrice(gems.Flawless.buyPrice)}</div>
+                </div>
+                <div>
+                    <div class="price-label">Profit</div>
+                    <div class="price-value ${profitClass}">${formatPrice(sellProfit)}</div>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+window.onload = function() {
+    loadGemstoneData();
+    addTierButtons();
+    // Start with prices view
+    switchView('prices');
+};
+    </script>
+</body>
+</html>
