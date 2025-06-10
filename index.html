@@ -241,6 +241,7 @@
             <button class="btn" onclick="sortByName()">🔤 Sort by Name</button>
             <button class="btn" onclick="sortByGemType()">💎 Sort by Gem Type</button>
             <button class="btn" onclick="showApiInstructions()">📡 Get Live Data</button>
+            <button class="btn" onclick="closeAndOpenDetailed()">📊 More Detailed Version</button>
         </div>
         
         <div id="prices-view" class="view-active">
@@ -885,6 +886,16 @@ function displayCraftingView() {
         `;
         container.appendChild(card);
     });
+}
+
+function closeAndOpenDetailed() {
+    // Hide both views
+    document.getElementById('prices-view').classList.remove('view-active');
+    document.getElementById('crafting-view').classList.remove('view-active');
+    // Optionally, you can also hide the controls or show a message here
+
+    // Open the detailed version in a new tab
+    window.open('https://arkaxcodes.github.io/gemstone-prices/', '_blank');
 }
 
 window.onload = function() {
