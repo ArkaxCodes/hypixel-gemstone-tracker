@@ -8,13 +8,13 @@ const TEXTURE = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-
 const GEMS = [
     { type: 'RUBY',       name: 'Ruby',       color: '#ff4757', glass: 'red',        section: 'Crystal Hollows' },
     { type: 'AMBER',      name: 'Amber',      color: '#ffa502', glass: 'orange',     section: 'Crystal Hollows' },
-    { type: 'SAPPHIRE',   name: 'Sapphire',   color: '#4a69ff', glass: 'light_blue', section: 'Crystal Hollows' },
+    { type: 'SAPPHIRE',   name: 'Sapphire',   color: '#7b93ff', glass: 'light_blue', section: 'Crystal Hollows' },
     { type: 'JADE',       name: 'Jade',       color: '#7bed9f', glass: 'lime',       section: 'Crystal Hollows' },
-    { type: 'AMETHYST',   name: 'Amethyst',   color: '#a66bff', glass: 'purple',     section: 'Crystal Hollows' },
+    { type: 'AMETHYST',   name: 'Amethyst',   color: '#b388ff', glass: 'purple',     section: 'Crystal Hollows' },
     { type: 'TOPAZ',      name: 'Topaz',      color: '#fff200', glass: 'yellow',     section: 'Crystal Hollows' },
     { type: 'JASPER',     name: 'Jasper',     color: '#e056c8', glass: 'magenta',    section: 'Crystal Hollows' },
     { type: 'OPAL',       name: 'Opal',       color: '#f1f2f6', glass: 'white',      section: 'Glacite Tunnels' },
-    { type: 'ONYX',       name: 'Onyx',       color: '#8a8f99', glass: 'black',      section: 'Glacite Tunnels' },
+    { type: 'ONYX',       name: 'Onyx',       color: '#a4a9b4', glass: 'black',      section: 'Glacite Tunnels' },
     { type: 'AQUAMARINE', name: 'Aquamarine', color: '#00cec9', glass: 'blue',       section: 'Glacite Tunnels' },
     { type: 'CITRINE',    name: 'Citrine',    color: '#e1a84a', glass: 'brown',      section: 'Glacite Tunnels' },
     { type: 'PERIDOT',    name: 'Peridot',    color: '#3fbf5f', glass: 'green',      section: 'Glacite Tunnels' }
@@ -150,6 +150,10 @@ function formatCoins(value) {
     return sign + v.toFixed(v < 10 && v % 1 ? 1 : 0);
 }
 
+function signed(value) {
+    return (value > 0 ? '+' : '') + formatCoins(value).replace(/^-/, '−');
+}
+
 function formatCount(value) {
     if (!value) return '0';
     if (value >= 1e6) return (value / 1e6).toFixed(1) + 'M';
@@ -183,25 +187,31 @@ const priceOf = (gem, tier) => state.prices[productId(gem, tier)];
 
 // ---------- Rendering ----------
 function render() {
-    document.querySelectorAll('.tabs .btn').forEach(b => b.classList.toggle('active', b.dataset.view === state.view));
+    document.querySelectorAll('.tabs .tab').forEach(b => {
+        const on = b.dataset.view === state.view;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', String(on));
+    });
     document.querySelectorAll('.view-only').forEach(el => { el.hidden = el.dataset.for !== state.view; });
     renderStatus();
 
     const content = document.getElementById('content');
     if (!state.source) {
-        content.innerHTML = '<div class="spinner"></div><div class="empty">Loading bazaar data…</div>';
+        content.innerHTML = `<div class="grid" aria-busy="true" aria-label="Loading bazaar data">${'<div class="panel skeleton"></div>'.repeat(6)}</div>`;
+        document.getElementById('stats').innerHTML = '';
         return;
     }
 
     let html = '';
     if (state.source === 'demo') {
-        html += `<div class="notice warn"><strong>📊 Showing demo data.</strong> Live prices could not be loaded
+        html += `<div class="notice warn"><strong>Showing demo data.</strong> Live prices could not be loaded
             (${escapeHtml(state.error || 'unknown error')}). Numbers below are placeholders — hit Refresh to try again.</div>`;
     } else if (state.error) {
         html += `<div class="notice warn">Last refresh failed (${escapeHtml(state.error)}). Showing the previous live prices.</div>`;
     }
     html += state.view === 'crafting' ? renderCrafting() : renderPrices();
     content.innerHTML = html;
+    renderStats();
 }
 
 function renderStatus() {
@@ -210,7 +220,7 @@ function renderStatus() {
     if (state.loading) {
         left.innerHTML = '<span class="badge loading">Updating…</span>';
     } else if (state.source === 'live') {
-        left.innerHTML = `<span class="badge live">● Live</span> Bazaar updated ${timeAgo(state.apiUpdated)}`;
+        left.innerHTML = `<span class="badge live">Live</span> Bazaar updated ${timeAgo(state.apiUpdated)}`;
     } else if (state.source === 'demo') {
         left.innerHTML = '<span class="badge demo">Demo data</span>';
     } else {
@@ -244,13 +254,13 @@ function renderPriceCards(gems) {
                     <td class="num muted">${formatCount(p.buyWeek + p.sellWeek)}</td>
                 </tr>`;
             }).join('');
-            return `<div class="card panel">
-                <div class="card-title" style="color:${gem.color}">${iconHtml(gem)} ${gem.name}</div>
+            return `<article class="card panel" style="--gem:${gem.color}">
+                <h3 class="card-title" style="color:${gem.color}">${iconHtml(gem)} ${gem.name}</h3>
                 <div class="table-wrap"><table>
                     <thead><tr><th>Tier</th><th>Insta-sell</th><th>Insta-buy</th><th>7d vol</th></tr></thead>
                     <tbody>${rows}</tbody>
                 </table></div>
-            </div>`;
+            </article>`;
         }).join('');
         return `<h2 class="section-title">${section}</h2><div class="grid">${cards}</div>`;
     }).join('');
@@ -320,6 +330,38 @@ function craftingRows() {
     return rows.sort((a, b) => b.profit - a.profit);
 }
 
+function bestBy(list, score) {
+    return list.reduce((best, x) => (best === null || score(x) > score(best) ? x : best), null);
+}
+
+function stat(label, value, sub, cls = '') {
+    return `<div class="stat panel"><span class="stat-label">${label}</span>
+        <span class="stat-value ${cls}">${value}</span><span class="stat-sub">${sub}</span></div>`;
+}
+
+function renderStats() {
+    const el = document.getElementById('stats');
+    const gems = filteredGems();
+    const tierChoice = val('tier');
+    const tier = state.view === 'prices' && tierChoice !== 'all' ? tierChoice : 'Fine';
+    const priced = gems.map(gem => ({ gem, p: priceOf(gem, tier) })).filter(r => r.p);
+    const topMine = bestBy(priced, r => r.p.instaSell);
+    const busiest = bestBy(priced, r => r.p.buyWeek + r.p.sellWeek);
+    const crafts = craftingRows();
+    const bestCraft = crafts[0] || null;
+    const profitable = crafts.filter(r => r.profit > 0).length;
+
+    el.innerHTML = [
+        topMine ? stat(`Best ${tier} to mine`, formatCoins(topMine.p.instaSell),
+            `<span style="color:${topMine.gem.color}">${topMine.gem.name}</span> · insta-sell`) : '',
+        bestCraft ? stat('Best craft', signed(bestCraft.profit),
+            `${bestCraft.gem.name} ${bestCraft.from} → ${bestCraft.to}`, bestCraft.profit > 0 ? 'pos' : 'neg') : '',
+        stat('Profitable crafts', `${profitable}/${crafts.length}`, 'with current craft settings'),
+        busiest ? stat(`Most traded ${tier}`, formatCount(busiest.p.buyWeek + busiest.p.sellWeek),
+            `<span style="color:${busiest.gem.color}">${busiest.gem.name}</span> · 7-day volume`) : ''
+    ].join('');
+}
+
 function renderCrafting() {
     const rows = craftingRows();
     if (rows.length === 0) return '<div class="empty">No crafts match your filters.</div>';
@@ -332,13 +374,13 @@ function renderCrafting() {
             <td class="num muted hide-sm">${r.qty} × ${formatCoins(r.unitCost)}</td>
             <td class="num">${formatCoins(r.cost)}</td>
             <td class="num">${formatCoins(r.revenue)}</td>
-            <td class="num ${cls}">${formatCoins(r.profit)}</td>
-            <td class="num ${cls}">${r.roi.toFixed(1)}%</td>
+            <td class="num ${cls}">${signed(r.profit)}</td>
+            <td class="num ${cls}">${r.profit > 0 ? '+' : ''}${r.roi.toFixed(1)}%</td>
         </tr>`;
     }).join('');
 
     const profitable = rows.filter(r => r.profit > 0).length;
-    return `<p class="muted" style="margin:0 4px 10px">${profitable} of ${rows.length} crafts are currently profitable. Profit is per crafted gem, after tax.</p>
+    return `<p class="intro">${profitable} of ${rows.length} crafts are currently profitable. Profit is per crafted gem, after tax.</p>
     <div class="panel big-table"><div class="table-wrap"><table>
         <thead><tr><th>Gemstone</th><th>Upgrade</th><th class="hide-sm">Inputs</th><th>Cost</th><th>Revenue</th><th>Profit</th><th>ROI</th></tr></thead>
         <tbody>${body}</tbody>
@@ -354,7 +396,7 @@ function scheduleAutoRefresh() {
     }
 }
 
-document.querySelectorAll('.tabs .btn').forEach(btn => btn.addEventListener('click', () => {
+document.querySelectorAll('.tabs .tab').forEach(btn => btn.addEventListener('click', () => {
     state.view = btn.dataset.view;
     saveSettings();
     render();
